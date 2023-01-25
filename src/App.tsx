@@ -465,7 +465,7 @@ function getWidgetViewOptions(
     },
   ];
 
-  if (data.geoPoints && data.geoPoints.length !== 0) {
+  if (data.bounds) {
     options.unshift({
       name: "map",
       value: MapWidgetView,
