@@ -1,13 +1,15 @@
 import { LngLat, LngLatBounds } from "maplibre-gl";
+import { createContext, useCallback } from "react";
 
 export interface Fact {
-  e: Id;
+  id: number;
+  e: EntityId;
   key: string;
   value: any;
 }
 
 export interface Entity {
-  id: Id;
+  id: EntityId;
   data: { [key: string]: any };
   facts: Fact[];
 }
@@ -16,9 +18,15 @@ export interface EntityMap {
   [id: string]: Entity;
 }
 
-const ID_MAP: { [name: string]: Id } = {};
+let nextId = 0;
 
-class Id {
+export function getId() {
+  return nextId++;
+}
+
+const ID_MAP: { [name: string]: EntityId } = {};
+
+export class EntityId {
   constructor(private name: string) {}
 
   toString() {
@@ -26,11 +34,11 @@ class Id {
   }
 }
 
-export function getId(name: string) {
+export function getEntityId(name: string) {
   let id = ID_MAP[name];
 
   if (!id) {
-    id = ID_MAP[name] = new Id(name);
+    id = ID_MAP[name] = new EntityId(name);
   }
 
   return id;
@@ -39,7 +47,7 @@ export function getId(name: string) {
 export function isId(value: any) {
   // this doesn't work because javascript is garbage and somehow there are 2 different Id classes
   // return value instanceof Id;
-  return value?.constructor?.name === "Id";
+  return value?.constructor?.name === "EntityId";
 }
 
 export function isEntity(value: any) {
@@ -86,7 +94,7 @@ function applyCustomComputations(entities: EntityMap) {
 
     // compute bounds if entity has geo positions
 
-    if (data.geoPoints.length !== 0) {
+    if (data.geoPoints.length !== 0 && !data.bounds) {
       const lngLats: LngLat[] = data.geoPoints;
 
       let bounds: LngLatBounds = lngLats[0].toBounds(500);
@@ -100,7 +108,7 @@ function applyCustomComputations(entities: EntityMap) {
   }
 }
 
-function getEntity(entities: EntityMap, e: Id) {
+function getEntity(entities: EntityMap, e: EntityId) {
   let entity = entities[e.toString()];
 
   if (!entity) {

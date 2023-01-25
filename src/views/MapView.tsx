@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
 import { LngLat, Map, Marker } from "maplibre-gl";
-import { WidgetViewProps } from "./index";
+import { WidgetViewProps } from "../Widget";
 
-export function MapView({ entity }: WidgetViewProps) {
+export function MapView({ entity, onReplaceFact }: WidgetViewProps) {
   const { bounds, geoPoints, width, height } = entity.data;
   const ref = useRef<HTMLDivElement>(null);
   const map = useRef<Map>();
@@ -28,8 +28,6 @@ export function MapView({ entity }: WidgetViewProps) {
     let isManualInteraction = false;
 
     map.current.on("mousedown", () => {
-      console.log("touchstart");
-
       isManualInteraction = true;
     });
 
@@ -47,8 +45,7 @@ export function MapView({ entity }: WidgetViewProps) {
         return;
       }
 
-      // TODO: implement
-      // onReplaceFact("bounds", map.current.getBounds());
+      onReplaceFact(entity.id, "bounds", map.current.getBounds());
     };
 
     map.current.on("zoomend", onMapViewChange);
@@ -61,15 +58,12 @@ export function MapView({ entity }: WidgetViewProps) {
     if (map.current && geoPoints) {
       // remove old markers
       for (const marker of markers.current) {
-        console.log("remove");
         marker.remove();
       }
 
       markers.current = [];
 
       for (const lngLat of geoPoints as LngLat[]) {
-        console.log("add marker", lngLat);
-
         const marker = new Marker();
         marker.setLngLat(new LngLat(lngLat.lng, lngLat.lat));
         marker.addTo(map.current);
