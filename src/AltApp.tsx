@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Cross1Icon } from "@radix-ui/react-icons";
+import { LngLat } from "maplibre-gl";
+import { Option } from "./Select";
 
 interface Fact {
   e: Id;
@@ -9,7 +11,8 @@ interface Fact {
 
 interface Entity {
   id: Id;
-  [key: string]: any;
+  data: { [key: string]: any };
+  facts: Fact[];
 }
 
 interface EntityMap {
@@ -18,11 +21,13 @@ interface EntityMap {
 
 function getWidgetEntities(entities: EntityMap) {
   return Object.values(entities).filter((entity) => {
+    const { width, height, x, y } = entity.data;
+
     return (
-      entity.width !== undefined &&
-      entity.height !== undefined &&
-      entity.x !== undefined &&
-      entity.y !== undefined
+      width !== undefined &&
+      height !== undefined &&
+      x !== undefined &&
+      y !== undefined
     );
   });
 }
@@ -47,25 +52,53 @@ function id(name: string) {
   return id;
 }
 
-function isId(id: any) {
-  return id instanceof Id;
+function isId(value: any) {
+  // this doesn't work because javascript is garbage and somehow there are 2 different Id classes
+  // return value instanceof Id;
+  return value?.constructor?.name === "Id";
+}
+
+function isEntity(value: any) {
+  return value && isId(value.id);
 }
 
 function getEntities(facts: Fact[]): EntityMap {
   const entities: EntityMap = {};
 
-  for (const { e, key, value } of facts) {
-    let entity = entities[e.toString()];
+  for (const fact of facts) {
+    const { e, key, value } = fact;
 
-    if (!entity) {
-      entity = entities[e.toString()] = { id: e };
+    const entity = getEntity(entities, e);
+
+    // if value is an id resolve it to the entity
+    if (isId(value)) {
+      const relatedEntity = getEntity(entities, value);
+      entity.data[key] = relatedEntity;
+      entity.facts.push({ ...fact, value: relatedEntity });
+    } else {
+      entity.data[key] = value;
+      entity.facts.push(fact);
     }
-
-    entity[key] = value;
   }
 
   return entities;
 }
+
+function getEntity(entities: EntityMap, e: Id) {
+  let entity = entities[e.toString()];
+
+  if (!entity) {
+    entity = entities[e.toString()] = { id: e, data: {}, facts: [] };
+  }
+
+  return entity;
+}
+
+const LOCATION_OPTIONS: Option<LngLat>[] = [
+  { name: "Aachen", value: new LngLat(6.083611, 50.775555) },
+  { name: "Boston", value: new LngLat(-71.057083, 42.361145) },
+  { name: "San Francisco", value: new LngLat(-122.431297, 37.773972) },
+];
 
 const INITIAL_FACTS: Fact[] = [
   { e: id("w1"), key: "width", value: 300 },
@@ -76,6 +109,9 @@ const INITIAL_FACTS: Fact[] = [
   { e: id("w2"), key: "height", value: 300 },
   { e: id("w2"), key: "x", value: 500 },
   { e: id("w2"), key: "y", value: 100 },
+  { e: id("w1"), key: "location", value: id("location") },
+  { e: id("location"), key: "name", value: LOCATION_OPTIONS[0].name },
+  { e: id("location"), key: "position", value: LOCATION_OPTIONS[0].value },
 ];
 
 export function AltApp() {
@@ -97,7 +133,8 @@ interface WidgetViewProps {
 }
 
 function WidgetView({ entity }: WidgetViewProps) {
-  const { x, y, width, height } = entity;
+  const { x, y, width, height } = entity.data;
+  const facts = entity.facts;
 
   return (
     <div
@@ -115,6 +152,53 @@ function WidgetView({ entity }: WidgetViewProps) {
           height: `${height}px`,
         }}
       ></div>
+
+      {facts.map((fact, index) => (
+        <FactView fact={fact} key={index} />
+      ))}
     </div>
+  );
+}
+
+interface FactViewProps {
+  fact: Fact;
+}
+
+function FactView({ fact }: FactViewProps) {
+  const { key, value } = fact;
+
+  if (isEntity(value)) {
+    return <EntityFactView fact={fact} />;
+  }
+
+  return <PrimitiveFactView fact={fact} />;
+}
+
+function PrimitiveFactView({ fact }: FactViewProps) {
+  const { key, value } = fact;
+
+  return (
+    <div className="p-1 bg-white rounded shadow border border-gray-300 flex gap-1">
+      {key}: {JSON.stringify(value)}
+    </div>
+  );
+}
+
+function EntityFactView({ fact }: FactViewProps) {
+  const { key } = fact;
+  const entity = fact.value as Entity;
+
+  return (
+    <>
+      <div className="p-1 bg-white rounded shadow border border-gray-300 flex gap-1">
+        {key}:
+        <span className="color-grey-200">{`{${entity.id.toString()}}`}</span>
+      </div>
+      <div className="pl-2 flex flex-col items-start gap-2">
+        {entity.facts.map((fact: Fact) => (
+          <FactView fact={fact} />
+        ))}
+      </div>
+    </>
   );
 }
