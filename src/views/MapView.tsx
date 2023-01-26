@@ -1,8 +1,15 @@
 import { useEffect, useRef } from "react";
 import { LngLat, Map, Marker } from "maplibre-gl";
 import { WidgetViewProps } from "../Widget";
+import { EntityValue, getEntityId } from "../store";
+import classNames from "classnames";
+import { createRoot } from "react-dom/client";
 
-export function MapView({ entity, onReplaceFact }: WidgetViewProps) {
+export function MapView({
+  entity,
+  onReplaceFact,
+  onRetractFact,
+}: WidgetViewProps) {
   const { bounds, geoPoints, width, height } = entity.data;
   const ref = useRef<HTMLDivElement>(null);
   const map = useRef<Map>();
@@ -17,12 +24,16 @@ export function MapView({ entity, onReplaceFact }: WidgetViewProps) {
       map.current?.remove();
     }
 
-    map.current = new Map({
+    const currentMap = (map.current = new Map({
       container: ref.current, // the id of the div element
       style: "map/styles.json",
       zoom: 15, // starting zoom
       center: [-118.805, 34.027], // starting location [longitude, latitude]
       attributionControl: false,
+    }));
+
+    markers.current.forEach((marker) => {
+      marker.addTo(currentMap);
     });
 
     let isManualInteraction = false;
@@ -55,20 +66,50 @@ export function MapView({ entity, onReplaceFact }: WidgetViewProps) {
   // add markers
 
   useEffect(() => {
-    if (map.current && geoPoints) {
+    const currentMap = map.current;
+
+    if (currentMap && geoPoints) {
       // remove old markers
-      for (const marker of markers.current) {
+      const markersToDelete = markers.current.slice(geoPoints.length);
+
+      for (const marker of markersToDelete) {
         marker.remove();
       }
 
-      markers.current = [];
+      markers.current = markers.current.slice(0, geoPoints.length);
 
-      for (const lngLat of geoPoints as LngLat[]) {
-        const marker = new Marker();
-        marker.setLngLat(new LngLat(lngLat.lng, lngLat.lat));
-        marker.addTo(map.current);
-        markers.current.push(marker);
-      }
+      (geoPoints as EntityValue<LngLat>[]).forEach((geoPoint, index) => {
+        let marker = markers.current[index];
+
+        if (!marker) {
+          const element = document.createElement("div");
+
+          element.addEventListener("mouseenter", () => {
+            onReplaceFact(geoPoint.entity.id, "highlighted", true);
+          });
+
+          element.addEventListener("mouseleave", () => {
+            onRetractFact(geoPoint.entity.id, "highlighted");
+          });
+
+          marker = new Marker(element);
+          marker.setLngLat(new LngLat(geoPoint.value.lng, geoPoint.value.lat));
+          marker.addTo(currentMap);
+
+          markers.current.push(marker);
+        }
+
+        marker.setLngLat(new LngLat(geoPoint.value.lng, geoPoint.value.lat));
+        marker._element.className = classNames(
+          "border rounded-full cursor-pointer",
+          geoPoint.entity.data.highlighted
+            ? "bg-red-500 border-red-600"
+            : "bg-red-300 border-red-400"
+        );
+        marker._element.style.width = "16px";
+        marker._element.style.height = "16px";
+        marker._element.dataset.e = geoPoint.entity.id.toString();
+      });
     }
   }, [geoPoints]);
 
@@ -94,3 +135,8 @@ export function MapView({ entity, onReplaceFact }: WidgetViewProps) {
     ></div>
   );
 }
+
+function renderGeoPointAsMarker(
+  marker: Marker,
+  geoPoint: EntityValue<LngLat>
+) {}

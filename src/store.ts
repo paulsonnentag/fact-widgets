@@ -78,16 +78,30 @@ export function getEntities(facts: Fact[]): EntityMap {
   return entities;
 }
 
+export interface EntityValue<T> {
+  value: T;
+  entity: Entity;
+}
+
 function applyCustomComputations(entities: EntityMap) {
   for (const { data, facts } of Object.values(entities)) {
     // accumulate geo positions in list
 
-    const geoPositions = (data.geoPoints = []);
+    const geoPositions: EntityValue<LngLat>[] = (data.geoPoints = []);
+
+    const addedEntityIds: { [id: string]: boolean } = {};
+
     for (const fact of facts) {
       if (isEntity(fact.value)) {
-        if (fact.value.data.geoPosition) {
-          // @ts-ignore
-          geoPositions.push(fact.value.data.geoPosition);
+        const e = fact.value.id.toString();
+
+        if (fact.value.data.geoPosition && !addedEntityIds[e]) {
+          addedEntityIds[e] = true;
+
+          geoPositions.push({
+            value: fact.value.data.geoPosition,
+            entity: fact.value,
+          });
         }
       }
     }
@@ -95,12 +109,12 @@ function applyCustomComputations(entities: EntityMap) {
     // compute bounds if entity has geo positions
 
     if (data.geoPoints.length !== 0 && !data.bounds) {
-      const lngLats: LngLat[] = data.geoPoints;
+      const geoPoints: EntityValue<LngLat>[] = data.geoPoints;
 
-      let bounds: LngLatBounds = lngLats[0].toBounds(500);
+      let bounds: LngLatBounds = geoPoints[0].value.toBounds(500);
 
-      for (const lngLat of lngLats) {
-        bounds = bounds.extend(lngLat.toBounds(500));
+      for (const geoPoint of geoPoints) {
+        bounds = bounds.extend(geoPoint.value.toBounds(500));
       }
 
       data.bounds = bounds;

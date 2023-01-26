@@ -56,8 +56,20 @@ const INITIAL_FACTS: Fact[] = [
   {
     id: getId(),
     e: getEntityId("location"),
+    key: "name",
+    value: LOCATION_OPTIONS[0].name,
+  },
+  {
+    id: getId(),
+    e: getEntityId("location"),
     key: "geoPosition",
     value: LOCATION_OPTIONS[0].value,
+  },
+  {
+    id: getId(),
+    e: getEntityId("w1"),
+    key: "cities nearby",
+    value: getEntityId("location"),
   },
 ];
 
@@ -65,8 +77,6 @@ export function App() {
   const [facts, setFacts] = useState<Fact[]>(INITIAL_FACTS);
   const entities = getEntities(facts);
   const widgetEntities = getWidgetEntities(entities);
-
-  console.log(entities);
 
   const onAddFact = useCallback(
     (e: EntityId, key: string, value: any) => {
