@@ -1,12 +1,18 @@
 import { Entity, EntityId, Fact, isEntity } from "./store";
-import { Cross2Icon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import {
+  AccessibilityIcon,
+  Cross2Icon,
+  MagnifyingGlassIcon,
+} from "@radix-ui/react-icons";
 import { Option, Select } from "./Select";
 import { LngLat, LngLatBounds } from "maplibre-gl";
 import { useCallback, useEffect } from "react";
-import { useEntity, useIsDebugMode } from "./App";
+import { DebugModeContext, useEntity, useIsDebugMode } from "./App";
 import { GEOAPIFY_KEY } from "./tokens";
 import { LOCATION_OPTIONS, POI_CATEGORY_OPTIONS } from "./constants";
 import ReactJson from "react-json-view";
+import { AddFactButton } from "./AddFactButton";
+import classNames from "classnames";
 
 interface FactEditorProps {
   fact: Fact;
@@ -14,9 +20,11 @@ interface FactEditorProps {
   onReplaceFact: (e: EntityId, key: string, value: any) => void;
   onRetractFact: (e: EntityId, key: string) => void;
   onRetractFactById: (id: number) => void;
+  isTopLevel?: boolean;
 }
 
 export function FactEditor({
+  isTopLevel = false,
   fact,
   onAddFact,
   onReplaceFact,
@@ -26,50 +34,64 @@ export function FactEditor({
   const { key, value } = fact;
   const isDebugMode = useIsDebugMode();
 
-  if (key === "location") {
-    return (
-      <>
-        <LocationFactEditor
-          fact={fact}
-          onAddFact={onAddFact}
-          onReplaceFact={onReplaceFact}
-          onRetractFact={onRetractFact}
-          onRetractFactById={onRetractFactById}
-        />
-        {isDebugMode && (
-          <EntityFactEditor
+  if (!isDebugMode || isTopLevel) {
+    if (key === "location") {
+      return (
+        <>
+          <LocationFactEditor
             fact={fact}
             onAddFact={onAddFact}
             onReplaceFact={onReplaceFact}
             onRetractFact={onRetractFact}
             onRetractFactById={onRetractFactById}
           />
-        )}
-      </>
-    );
-  }
+          {isDebugMode && (
+            <EntityFactEditor
+              fact={fact}
+              onAddFact={onAddFact}
+              onReplaceFact={onReplaceFact}
+              onRetractFact={onRetractFact}
+              onRetractFactById={onRetractFactById}
+            />
+          )}
+        </>
+      );
+    }
 
-  if (key === "poiSearch") {
-    return (
-      <>
-        <PoiSearchFactEditor
-          fact={fact}
-          onAddFact={onAddFact}
-          onReplaceFact={onReplaceFact}
-          onRetractFact={onRetractFact}
-          onRetractFactById={onRetractFactById}
-        />
-        {isDebugMode && (
-          <EntityFactEditor
+    if (key === "poiSearch") {
+      return (
+        <>
+          <PoiSearchFactEditor
             fact={fact}
             onAddFact={onAddFact}
             onReplaceFact={onReplaceFact}
             onRetractFact={onRetractFact}
             onRetractFactById={onRetractFactById}
           />
-        )}
-      </>
-    );
+          {isDebugMode && (
+            <EntityFactEditor
+              fact={fact}
+              onAddFact={onAddFact}
+              onReplaceFact={onReplaceFact}
+              onRetractFact={onRetractFact}
+              onRetractFactById={onRetractFactById}
+            />
+          )}
+        </>
+      );
+    }
+
+    if (key === "accessibilityInfo") {
+      return (
+        <AccessibilityInfoFactEditor
+          fact={fact}
+          onAddFact={onAddFact}
+          onReplaceFact={onReplaceFact}
+          onRetractFact={onRetractFact}
+          onRetractFactById={onRetractFactById}
+        />
+      );
+    }
   }
 
   if (!isDebugMode) {
@@ -105,7 +127,7 @@ function PrimitiveFactEditor({ fact, onRetractFactById }: FactEditorProps) {
 
   return (
     <div className="p-1 bg-white rounded shadow border border-gray-300 flex gap-1">
-      {key}:
+      <span className="text-gray-500">{key}</span>:{""}
       {isObject ? (
         <ReactJson
           displayDataTypes={false}
@@ -137,7 +159,14 @@ function EntityFactEditor({
   return (
     <>
       <div className="p-1 bg-white rounded shadow border border-gray-300 flex gap-1">
-        {key}:<span className="text-gray-500">{"{...}"}</span>
+        {key}:
+        <ReactJson
+          displayDataTypes={false}
+          src={fact.value.id}
+          collapsed={true}
+          enableClipboard={false}
+          name={false}
+        />
         <button onClick={() => onRetractFactById(fact.id)}>
           <Cross2Icon />
         </button>
@@ -163,6 +192,8 @@ function LocationFactEditor({
   onRetractFactById,
   onReplaceFact,
 }: FactEditorProps) {
+  const location = fact.value;
+
   const selectedOption = {
     name: fact.value.data.name,
     value: fact.value.data.geoPosition,
@@ -178,7 +209,12 @@ function LocationFactEditor({
   }, []);
 
   return (
-    <div className="p-1 bg-gray-100 rounded shadow border border-gray-300 flex gap-1">
+    <div
+      className={classNames(
+        "p-1 bg-gray-100 rounded shadow border border-gray-300 flex gap-1",
+        location.data.highlighted ? "border-blue-400" : "border-gray-300"
+      )}
+    >
       Location{" "}
       <Select
         selectedOption={selectedOption}
@@ -200,7 +236,7 @@ function PoiSearchFactEditor({
   onReplaceFact,
 }: FactEditorProps) {
   const widget = useEntity(fact.e);
-  const placeSearch = fact.value;
+  const placeSearch = fact.value as Entity;
 
   const selectedOption = POI_CATEGORY_OPTIONS.find(
     ({ value }) => value === fact.value.data.category
@@ -255,26 +291,58 @@ function PoiSearchFactEditor({
         }
       })
       .catch((error) => {
-        onRetractFact(placeSearch, "items");
+        onRetractFact(placeSearch.id, "items");
       });
   }, [bounds, category, placeSearch]);
 
   return (
     <>
-      <div className="p-1 bg-gray-100 rounded shadow border border-gray-300 flex gap-1">
-        POI search{" "}
-        <Select
-          selectedOption={selectedOption}
-          options={POI_CATEGORY_OPTIONS}
-          onChange={onChange}
-        />
-        <button onClick={onSearch}>
-          <MagnifyingGlassIcon />
-        </button>
-        <button onClick={() => onRetractFactById(fact.id)}>
-          <Cross2Icon />
-        </button>
+      <div className="flex gap-2 items-center">
+        <div className="p-1 bg-gray-100 rounded shadow border border-gray-300 flex gap-1">
+          POI search{" "}
+          <Select
+            selectedOption={selectedOption}
+            options={POI_CATEGORY_OPTIONS}
+            onChange={onChange}
+          />
+          <button onClick={onSearch}>
+            <MagnifyingGlassIcon />
+          </button>
+          <button onClick={() => onRetractFactById(fact.id)}>
+            <Cross2Icon />
+          </button>
+        </div>
+        <AddFactButton entity={placeSearch} onAddFact={onAddFact} />
+      </div>
+
+      <div className="pl-2 flex flex-col items-start gap-2">
+        <DebugModeContext.Provider value={false}>
+          {placeSearch.facts.map((fact: Fact, index) => (
+            <FactEditor
+              key={index}
+              fact={fact}
+              onAddFact={onAddFact}
+              onReplaceFact={onReplaceFact}
+              onRetractFact={onRetractFact}
+              onRetractFactById={onRetractFactById}
+            />
+          ))}
+        </DebugModeContext.Provider>
       </div>
     </>
+  );
+}
+
+function AccessibilityInfoFactEditor({
+  fact,
+  onRetractFactById,
+}: FactEditorProps) {
+  return (
+    <div className="p-1 bg-gray-100 rounded shadow border border-gray-300 flex gap-1">
+      is wheelchair-accessible
+      <button onClick={() => onRetractFactById(fact.id)}>
+        <Cross2Icon />
+      </button>
+    </div>
   );
 }

@@ -17,7 +17,7 @@ export interface WidgetViewProps {
   onRetractFactById: (id: number) => void;
 }
 
-export function WidgetView({
+export default function WidgetView({
   entity,
   onAddFact,
   onReplaceFact,
@@ -59,6 +59,7 @@ export function WidgetView({
 
       {facts.map((fact, index) => (
         <FactEditor
+          isTopLevel={true}
           key={index}
           fact={fact}
           onAddFact={onAddFact}

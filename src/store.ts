@@ -92,31 +92,50 @@ export interface EntityValue<T> {
   entity: Entity;
 }
 
+export interface GeoMarker {
+  point: LngLat;
+  color?: string;
+}
+
 function applyCustomComputations(entities: EntityMap) {
   for (const { data, facts } of Object.values(entities)) {
     // accumulate geo positions in list
 
-    const geoPositions: EntityValue<LngLat>[] = (data.geoPoints = []);
+    const geoMarkers: EntityValue<GeoMarker>[] = (data.geoMarkers = []);
 
     const addedEntityIds: { [id: string]: boolean } = {};
 
     for (const fact of facts) {
       if (isEntity(fact.value)) {
-        const e = fact.value.id.toString();
+        const entity = fact.value as Entity;
 
-        if (fact.value.data.geoPosition && !addedEntityIds[e]) {
+        const e = entity.id.toString();
+
+        if (entity.data.geoPosition && !addedEntityIds[e]) {
           addedEntityIds[e] = true;
 
-          geoPositions.push({
-            value: fact.value.data.geoPosition,
+          geoMarkers.push({
+            value: { point: fact.value.data.geoPosition },
             entity: fact.value,
           });
         }
 
-        if (fact.value.data.items) {
+        if (entity.data.items) {
           for (const item of fact.value.data.items) {
-            geoPositions.push({
-              value: item.data.geoPoint,
+            const value: GeoMarker = {
+              point: item.data.geoPoint,
+            };
+
+            if (entity.data.accessibilityInfo) {
+              value.color = item.data.place.categories.includes(
+                "wheelchair.yes"
+              )
+                ? undefined
+                : "gray";
+            }
+
+            geoMarkers.push({
+              value,
               entity: fact.value,
             });
           }
@@ -126,13 +145,13 @@ function applyCustomComputations(entities: EntityMap) {
 
     // compute bounds if entity has geo positions
 
-    if (data.geoPoints.length !== 0 && !data.bounds) {
-      const geoPoints: EntityValue<LngLat>[] = data.geoPoints;
+    if (geoMarkers.length !== 0 && !data.bounds) {
+      const geoMarkers: EntityValue<GeoMarker>[] = data.geoMarkers;
 
-      let bounds: LngLatBounds = geoPoints[0].value.toBounds(500);
+      let bounds: LngLatBounds = geoMarkers[0].value.point.toBounds(500);
 
-      for (const geoPoint of geoPoints) {
-        bounds = bounds.extend(geoPoint.value.toBounds(500));
+      for (const geoMarker of geoMarkers) {
+        bounds = bounds.extend(geoMarker.value.point.toBounds(500));
       }
 
       data.bounds = bounds;

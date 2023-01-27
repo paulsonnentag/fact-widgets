@@ -24,6 +24,63 @@ export function AddFactButton({ entity, onAddFact }: AddFactButtonProps) {
     };
   }, [setIsOpen]);
 
+  const options = [];
+
+  if (entity.data.width) {
+    // this kind of a hack to hide the option for non top level widgets
+    options.push(
+      <button
+        key="location"
+        className="hover:bg-gray-200 text-left p-1 whitespace-nowrap"
+        onClick={() => {
+          const locationId = getEntityId(v4());
+
+          onAddFact(entity.id, "location", locationId);
+          onAddFact(locationId, "name", LOCATION_OPTIONS[0].name);
+          onAddFact(locationId, "geoPosition", LOCATION_OPTIONS[0].value);
+        }}
+      >
+        Location
+      </button>
+    );
+  }
+
+  if (entity.data.bounds) {
+    options.push(
+      <button
+        key="poiSearch"
+        className="hover:bg-gray-200 text-left p-1 whitespace-nowrap"
+        onClick={() => {
+          const searchId = getEntityId(v4());
+
+          onAddFact(entity.id, "poiSearch", searchId);
+          onAddFact(searchId, "category", POI_CATEGORY_OPTIONS[0].value);
+        }}
+      >
+        POI search
+      </button>
+    );
+  }
+
+  if (entity.data.items) {
+    options.push(
+      <button
+        key="wheelChairAccessible"
+        className="hover:bg-gray-200 text-left p-1 whitespace-nowrap"
+        onClick={() => {
+          const searchId = getEntityId(v4());
+          onAddFact(entity.id, "accessibilityInfo", true);
+        }}
+      >
+        is wheelchair-accessible
+      </button>
+    );
+  }
+
+  if (options.length === 0) {
+    return null;
+  }
+
   return (
     <div className="relative">
       <button
@@ -36,45 +93,8 @@ export function AddFactButton({ entity, onAddFact }: AddFactButtonProps) {
       </button>
 
       {isOpen && (
-        <div className="relative border border-gray-100 flex flex-col justify-start rounded shadow overflow-hidden">
-          <button
-            className="hover:bg-gray-100 text-left p-1"
-            onClick={() => {
-              const locationId = getEntityId(v4());
-
-              onAddFact(entity.id, "location", locationId);
-              onAddFact(locationId, "name", LOCATION_OPTIONS[0].name);
-              onAddFact(locationId, "geoPosition", LOCATION_OPTIONS[0].value);
-            }}
-          >
-            Location
-          </button>
-          {entity.data.bounds && (
-            <button
-              className="hover:bg-gray-100 text-left p-1"
-              onClick={() => {
-                const searchId = getEntityId(v4());
-
-                onAddFact(entity.id, "poiSearch", searchId);
-                onAddFact(searchId, "category", POI_CATEGORY_OPTIONS[0].value);
-              }}
-            >
-              POI search
-            </button>
-          )}
-          {entity.data.categories && (
-            <button
-              className="hover:bg-gray-100 text-left p-1"
-              onClick={() => {
-                const searchId = getEntityId(v4());
-
-                onAddFact(entity.id, "wheelChairAccessible", searchId);
-                onAddFact(searchId, "category", POI_CATEGORY_OPTIONS[0].value);
-              }}
-            >
-              POI search
-            </button>
-          )}
+        <div className="absolute border border-gray-100 flex flex-col justify-start rounded shadow overflow-hidden bg-white z-50">
+          {options.map((option) => option)}
         </div>
       )}
     </div>

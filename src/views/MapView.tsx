@@ -1,17 +1,29 @@
 import { useEffect, useRef } from "react";
 import { LngLat, Map, Marker } from "maplibre-gl";
 import { WidgetViewProps } from "../Widget";
-import { EntityValue, getEntityId } from "../store";
+import { EntityValue, GeoMarker, getEntityId } from "../store";
 import classNames from "classnames";
 import { createRoot } from "react-dom/client";
 import "maplibre-gl/dist/maplibre-gl.css";
+
+const colors = [
+  "bg-gray-400",
+  "bg-gray-500",
+  "border-gray-500",
+  "border-gray-600",
+
+  "bg-blue-400",
+  "bg-blue-500",
+  "border-blue-500",
+  "border-blue-600",
+];
 
 export function MapView({
   entity,
   onReplaceFact,
   onRetractFact,
 }: WidgetViewProps) {
-  const { bounds, geoPoints, width, height } = entity.data;
+  const { bounds, geoMarkers, width, height } = entity.data;
   const ref = useRef<HTMLDivElement>(null);
   const map = useRef<Map>();
   const markers = useRef<Marker[]>([]);
@@ -69,17 +81,18 @@ export function MapView({
   useEffect(() => {
     const currentMap = map.current;
 
-    if (currentMap && geoPoints) {
+    if (currentMap && geoMarkers) {
       // remove old markers
-      const markersToDelete = markers.current.slice(geoPoints.length);
+      const markersToDelete = markers.current.slice(geoMarkers.length);
 
       for (const marker of markersToDelete) {
+        console.log("remove markers");
         marker.remove();
       }
 
-      markers.current = markers.current.slice(0, geoPoints.length);
+      markers.current = markers.current.slice(0, geoMarkers.length);
 
-      (geoPoints as EntityValue<LngLat>[]).forEach((geoPoint, index) => {
+      (geoMarkers as EntityValue<GeoMarker>[]).forEach((geoMarker, index) => {
         let marker = markers.current[index];
 
         if (!marker) {
@@ -93,33 +106,36 @@ export function MapView({
           markerElement.style.backgroundSize = "100%";
 
           markerElement.addEventListener("mouseenter", () => {
-            onReplaceFact(geoPoint.entity.id, "highlighted", true);
+            onReplaceFact(geoMarker.entity.id, "highlighted", true);
           });
 
           markerElement.addEventListener("mouseleave", () => {
-            onRetractFact(geoPoint.entity.id, "highlighted");
+            onRetractFact(geoMarker.entity.id, "highlighted");
           });
 
           marker = new Marker(markerElement);
-          marker.setLngLat(new LngLat(geoPoint.value.lng, geoPoint.value.lat));
+          marker.setLngLat(
+            new LngLat(geoMarker.value.point.lng, geoMarker.value.point.lat)
+          );
           marker.addTo(currentMap);
 
           markers.current.push(marker);
         }
 
-        marker.setLngLat(geoPoint.value);
+        marker.setLngLat(geoMarker.value.point);
 
         const markerElement = marker._element;
+        const color = geoMarker.value.color ?? "blue";
 
         markerElement.className = classNames(
-          "marker border rounded-full cursor-pointer absolute",
-          geoPoint.entity.data.highlighted
-            ? "bg-red-500 border-red-600"
-            : "bg-red-300 border-red-400"
+          "border rounded-full cursor-pointer absolute",
+          geoMarker.entity.data.highlighted
+            ? `bg-${color}-500 border-${color}-600`
+            : `bg-${color}-400 border-${color}-500`
         );
       });
     }
-  }, [geoPoints]);
+  }, [geoMarkers]);
 
   // zoom to current bounds
 

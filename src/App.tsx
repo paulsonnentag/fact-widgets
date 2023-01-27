@@ -7,7 +7,7 @@ import {
   getEntityId,
   getId,
 } from "./store";
-import { WidgetView } from "./Widget";
+import WidgetView from "./Widget";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 function getWidgetEntities(entities: EntityMap) {
@@ -78,7 +78,7 @@ export function App() {
   return (
     <DebugModeContext.Provider value={isDebugMode}>
       <EntitiesContext.Provider value={entities}>
-        <div className="w-screen h-screen">
+        <div className="w-screen h-screen bg-gray-100 overflow-auto overflow-hidden">
           {widgetEntities.map((entity) => (
             <WidgetView
               key={entity.id.toString()}
