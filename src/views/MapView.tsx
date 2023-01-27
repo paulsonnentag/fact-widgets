@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { LngLat, Map, Marker } from "maplibre-gl";
+import { LngLat, Map, Marker, Popup } from "maplibre-gl";
 import { WidgetViewProps } from "../Widget";
 import { EntityValue, GeoMarker, getEntityId } from "../store";
 import classNames from "classnames";
@@ -27,6 +27,12 @@ export function MapView({
   const ref = useRef<HTMLDivElement>(null);
   const map = useRef<Map>();
   const markers = useRef<Marker[]>([]);
+  const popUp = useRef<Popup>(
+    new Popup({
+      closeButton: false,
+      closeOnClick: false,
+    })
+  );
 
   useEffect(() => {
     if (!ref.current) {
@@ -105,14 +111,6 @@ export function MapView({
           markerElement.style.height = `${height}px`;
           markerElement.style.backgroundSize = "100%";
 
-          markerElement.addEventListener("mouseenter", () => {
-            onReplaceFact(geoMarker.entity.id, "highlighted", true);
-          });
-
-          markerElement.addEventListener("mouseleave", () => {
-            onRetractFact(geoMarker.entity.id, "highlighted");
-          });
-
           marker = new Marker(markerElement);
           marker.setLngLat(
             new LngLat(geoMarker.value.point.lng, geoMarker.value.point.lat)
@@ -126,6 +124,24 @@ export function MapView({
 
         const markerElement = marker._element;
         const color = geoMarker.value.color ?? "blue";
+
+        markerElement.onmouseenter = () => {
+          if (geoMarker.value.label) {
+            popUp.current
+              .setLngLat(geoMarker.value.point)
+              .setHTML(geoMarker.value.label);
+          }
+
+          popUp.current.addTo(currentMap);
+
+          onReplaceFact(geoMarker.entity.id, "highlighted", true);
+        };
+
+        markerElement.onmouseleave = () => {
+          popUp.current.remove();
+
+          onRetractFact(geoMarker.entity.id, "highlighted");
+        };
 
         markerElement.className = classNames(
           "border rounded-full cursor-pointer absolute",

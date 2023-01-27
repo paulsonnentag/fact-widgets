@@ -94,6 +94,7 @@ export interface EntityValue<T> {
 
 export interface GeoMarker {
   point: LngLat;
+  label?: string;
   color?: string;
 }
 
@@ -115,7 +116,10 @@ function applyCustomComputations(entities: EntityMap) {
           addedEntityIds[e] = true;
 
           geoMarkers.push({
-            value: { point: fact.value.data.geoPosition },
+            value: {
+              point: fact.value.data.geoPosition,
+              label: fact.value.data.name as string,
+            },
             entity: fact.value,
           });
         }
@@ -124,6 +128,7 @@ function applyCustomComputations(entities: EntityMap) {
           for (const item of fact.value.data.items) {
             const value: GeoMarker = {
               point: item.data.geoPoint,
+              label: item.data.place.name,
             };
 
             if (entity.data.accessibilityInfo) {
