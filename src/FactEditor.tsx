@@ -236,7 +236,7 @@ function PoiSearchFactEditor({
   onReplaceFact,
 }: FactEditorProps) {
   const widget = useEntity(fact.e);
-  const placeSearch = fact.value as Entity;
+  const poiSearch = fact.value as Entity;
 
   const selectedOption = POI_CATEGORY_OPTIONS.find(
     ({ value }) => value === fact.value.data.category
@@ -250,7 +250,7 @@ function PoiSearchFactEditor({
     }
   }, []);
 
-  const category = placeSearch.data.category;
+  const category = poiSearch.data.category;
   const bounds: LngLatBounds = widget.data.bounds;
 
   const onSearch = useCallback(() => {
@@ -277,9 +277,9 @@ function PoiSearchFactEditor({
     )
       .then((response) => response.json())
       .then((result) => {
-        onRetractFact(placeSearch.id, "items");
+        onRetractFact(poiSearch.id, "items");
         for (const feature of result.features) {
-          onAddFact(placeSearch.id, "items", {
+          onAddFact(poiSearch.id, "items", {
             data: {
               geoPoint: new LngLat(
                 feature.geometry.coordinates[0],
@@ -291,14 +291,19 @@ function PoiSearchFactEditor({
         }
       })
       .catch((error) => {
-        onRetractFact(placeSearch.id, "items");
+        onRetractFact(poiSearch.id, "items");
       });
-  }, [bounds, category, placeSearch]);
+  }, [bounds, category, poiSearch]);
 
   return (
     <>
       <div className="flex gap-2 items-center">
-        <div className="p-1 bg-gray-100 rounded shadow border border-gray-300 flex gap-1">
+        <div
+          className={classNames(
+            "p-1 bg-gray-100 rounded shadow border border-gray-300 flex gap-1",
+            poiSearch.data.highlighted ? "border-blue-400" : "border-gray-300"
+          )}
+        >
           POI search{" "}
           <Select
             selectedOption={selectedOption}
@@ -312,12 +317,12 @@ function PoiSearchFactEditor({
             <Cross2Icon />
           </button>
         </div>
-        <AddFactButton entity={placeSearch} onAddFact={onAddFact} />
+        <AddFactButton entity={poiSearch} onAddFact={onAddFact} />
       </div>
 
       <div className="pl-2 flex flex-col items-start gap-2">
         <DebugModeContext.Provider value={false}>
-          {placeSearch.facts.map((fact: Fact, index) => (
+          {poiSearch.facts.map((fact: Fact, index) => (
             <FactEditor
               key={index}
               fact={fact}

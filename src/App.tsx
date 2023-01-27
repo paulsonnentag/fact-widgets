@@ -78,7 +78,7 @@ export function App() {
   return (
     <DebugModeContext.Provider value={isDebugMode}>
       <EntitiesContext.Provider value={entities}>
-        <div className="w-screen h-screen bg-gray-100 overflow-auto overflow-hidden">
+        <div className="w-screen h-screen bg-gray-100 overflow-auto relative">
           {widgetEntities.map((entity) => (
             <WidgetView
               key={entity.id.toString()}
@@ -96,7 +96,7 @@ export function App() {
               checked={isDebugMode}
               onChange={() => setIsDebugMode((isDebugMode) => !isDebugMode)}
             />{" "}
-            debug view
+            debug mode
           </label>
         </div>
       </EntitiesContext.Provider>
