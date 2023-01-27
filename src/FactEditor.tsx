@@ -6,6 +6,7 @@ import { useCallback, useEffect } from "react";
 import { useEntity, useIsDebugMode } from "./App";
 import { GEOAPIFY_KEY } from "./tokens";
 import { LOCATION_OPTIONS, POI_CATEGORY_OPTIONS } from "./constants";
+import ReactJson from "react-json-view";
 
 interface FactEditorProps {
   fact: Fact;
@@ -100,10 +101,22 @@ export function FactEditor({
 
 function PrimitiveFactEditor({ fact, onRetractFactById }: FactEditorProps) {
   const { key, value } = fact;
+  const isObject = typeof value === "object";
 
   return (
     <div className="p-1 bg-white rounded shadow border border-gray-300 flex gap-1">
-      {key}: {JSON.stringify(value)}
+      {key}:
+      {isObject ? (
+        <ReactJson
+          displayDataTypes={false}
+          src={value}
+          collapsed={true}
+          enableClipboard={false}
+          name={false}
+        />
+      ) : (
+        JSON.stringify(value)
+      )}
       <button onClick={() => onRetractFactById(fact.id)}>
         <Cross2Icon />
       </button>
@@ -166,7 +179,7 @@ function LocationFactEditor({
 
   return (
     <div className="p-1 bg-gray-100 rounded shadow border border-gray-300 flex gap-1">
-      location{" "}
+      Location{" "}
       <Select
         selectedOption={selectedOption}
         options={LOCATION_OPTIONS}
@@ -190,7 +203,7 @@ function PoiSearchFactEditor({
   const placeSearch = fact.value;
 
   const selectedOption = POI_CATEGORY_OPTIONS.find(
-    ({ value }) => fact.value.data.category
+    ({ value }) => value === fact.value.data.category
   );
 
   const onChange = useCallback((option: Option<string> | undefined) => {
@@ -249,7 +262,7 @@ function PoiSearchFactEditor({
   return (
     <>
       <div className="p-1 bg-gray-100 rounded shadow border border-gray-300 flex gap-1">
-        find{" "}
+        POI search{" "}
         <Select
           selectedOption={selectedOption}
           options={POI_CATEGORY_OPTIONS}

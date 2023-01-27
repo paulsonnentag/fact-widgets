@@ -4,6 +4,7 @@ import { WidgetViewProps } from "../Widget";
 import { EntityValue, getEntityId } from "../store";
 import classNames from "classnames";
 import { createRoot } from "react-dom/client";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 export function MapView({
   entity,
@@ -82,17 +83,24 @@ export function MapView({
         let marker = markers.current[index];
 
         if (!marker) {
-          const element = document.createElement("div");
+          const markerElement = document.createElement("div");
 
-          element.addEventListener("mouseenter", () => {
+          const width = 16;
+          const height = 16;
+          markerElement.className = "marker";
+          markerElement.style.width = `${width}px`;
+          markerElement.style.height = `${height}px`;
+          markerElement.style.backgroundSize = "100%";
+
+          markerElement.addEventListener("mouseenter", () => {
             onReplaceFact(geoPoint.entity.id, "highlighted", true);
           });
 
-          element.addEventListener("mouseleave", () => {
+          markerElement.addEventListener("mouseleave", () => {
             onRetractFact(geoPoint.entity.id, "highlighted");
           });
 
-          marker = new Marker(element);
+          marker = new Marker(markerElement);
           marker.setLngLat(new LngLat(geoPoint.value.lng, geoPoint.value.lat));
           marker.addTo(currentMap);
 
@@ -100,15 +108,15 @@ export function MapView({
         }
 
         marker.setLngLat(geoPoint.value);
-        marker._element.className = classNames(
-          "border rounded-full cursor-pointer",
+
+        const markerElement = marker._element;
+
+        markerElement.className = classNames(
+          "marker border rounded-full cursor-pointer absolute",
           geoPoint.entity.data.highlighted
             ? "bg-red-500 border-red-600"
             : "bg-red-300 border-red-400"
         );
-        marker._element.style.width = "16px";
-        marker._element.style.height = "16px";
-        marker._element.dataset.e = geoPoint.entity.id.toString();
       });
     }
   }, [geoPoints]);
