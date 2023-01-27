@@ -99,7 +99,7 @@ export function MapView({
           markers.current.push(marker);
         }
 
-        marker.setLngLat(new LngLat(geoPoint.value.lng, geoPoint.value.lat));
+        marker.setLngLat(geoPoint.value);
         marker._element.className = classNames(
           "border rounded-full cursor-pointer",
           geoPoint.entity.data.highlighted

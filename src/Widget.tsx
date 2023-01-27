@@ -1,7 +1,12 @@
-import { Entity, Fact, EntityId, isEntity } from "./store";
+import { Entity, EntityId, getEntityId, getId } from "./store";
 import { getWidgetViewOptions } from "./views";
-import { createElement } from "react";
-import { Cross2Icon } from "@radix-ui/react-icons";
+import { createElement, useEffect, useState } from "react";
+import { FactEditor } from "./FactEditor";
+import ReactJson from "react-json-view";
+import { useIsDebugMode } from "./App";
+import { PlusIcon } from "@radix-ui/react-icons";
+import { v4 } from "uuid";
+import { LOCATION_OPTIONS, POI_CATEGORY_OPTIONS } from "./constants";
 
 export interface WidgetViewProps {
   entity: Entity;
@@ -18,6 +23,7 @@ export function WidgetView({
   onRetractFact,
   onRetractFactById,
 }: WidgetViewProps) {
+  const isDebugMode = useIsDebugMode();
   const { x, y, width, height } = entity.data;
   const facts = entity.facts;
 
@@ -50,90 +56,94 @@ export function WidgetView({
           })}
       </div>
 
-      <div>Facts</div>
-
       {facts.map((fact, index) => (
-        <FactView
-          fact={fact}
+        <FactEditor
           key={index}
+          fact={fact}
+          onAddFact={onAddFact}
+          onReplaceFact={onReplaceFact}
+          onRetractFact={onRetractFact}
           onRetractFactById={onRetractFactById}
         />
       ))}
 
-      <div>Data</div>
+      <AddFactButton entity={entity} onAddFact={onAddFact} />
 
-      {Object.entries(entity.data).map(([key, value]) => (
-        <AggregateView key={key} name={key} value={value} />
-      ))}
-    </div>
-  );
-}
-
-interface FactViewProps {
-  fact: Fact;
-  onRetractFactById: (id: number) => void;
-}
-
-function FactView({ fact, onRetractFactById }: FactViewProps) {
-  const { key, value } = fact;
-
-  if (isEntity(value)) {
-    return <EntityFactView fact={fact} onRetractFactById={onRetractFactById} />;
-  }
-
-  return (
-    <PrimitiveFactView fact={fact} onRetractFactById={onRetractFactById} />
-  );
-}
-
-function PrimitiveFactView({ fact, onRetractFactById }: FactViewProps) {
-  const { key, value } = fact;
-
-  return (
-    <div className="p-1 bg-white rounded shadow border border-gray-300 flex gap-1">
-      {key}: {JSON.stringify(value)}
-      <button onClick={() => onRetractFactById(fact.id)}>
-        <Cross2Icon />
-      </button>
-    </div>
-  );
-}
-
-function EntityFactView({ fact, onRetractFactById }: FactViewProps) {
-  const { key } = fact;
-  const entity = fact.value as Entity;
-
-  return (
-    <>
-      <div className="p-1 bg-white rounded shadow border border-gray-300 flex gap-1">
-        {key}:
-        <span className="color-grey-200">{`{${entity.id.toString()}}`}</span>
-        <button onClick={() => onRetractFactById(fact.id)}>
-          <Cross2Icon />
-        </button>
-      </div>
-      <div className="pl-2 flex flex-col items-start gap-2">
-        {entity.facts.map((fact: Fact, index) => (
-          <FactView
-            fact={fact}
-            key={index}
-            onRetractFactById={onRetractFactById}
+      {isDebugMode && (
+        <div className="pt-3">
+          <ReactJson
+            displayDataTypes={false}
+            src={entity.data}
+            collapsed={true}
+            enableClipboard={false}
+            name={"widget"}
           />
-        ))}
-      </div>
-    </>
+        </div>
+      )}
+    </div>
   );
 }
 
-interface DataEntryViewProps {
-  name: string;
-  value: any;
+interface AddFactButtonProps {
+  entity: Entity;
+  onAddFact: (e: EntityId, key: string, value: any) => void;
 }
 
-function AggregateView({ name, value }: DataEntryViewProps) {
+function AddFactButton({ entity, onAddFact }: AddFactButtonProps) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    const onClickHandler = () => {
+      setIsOpen(false);
+    };
+
+    document.addEventListener("click", onClickHandler);
+
+    return () => {
+      document.removeEventListener("click", onClickHandler);
+    };
+  }, [setIsOpen]);
+
   return (
-    <div className="p-1 bg-gray-200 rounded shadow border border-gray-300 flex gap-1">
-      {name}: {JSON.stringify(value)}
+    <div className="relative">
+      <button
+        onClick={(evt) => {
+          evt.stopPropagation();
+          setIsOpen((isOpen) => !isOpen);
+        }}
+      >
+        <PlusIcon />
+      </button>
+
+      {isOpen && (
+        <div className="relative border border-gray-100 flex flex-col justify-start rounded shadow overflow-hidden">
+          <button
+            className="hover:bg-gray-100 text-left p-1"
+            onClick={() => {
+              const locationId = getEntityId(v4());
+
+              onAddFact(entity.id, "location", locationId);
+              onAddFact(locationId, "name", LOCATION_OPTIONS[0].name);
+              onAddFact(locationId, "geoPosition", LOCATION_OPTIONS[0].value);
+            }}
+          >
+            Location
+          </button>
+          {entity.data.bounds && (
+            <button
+              className="hover:bg-gray-100 text-left p-1"
+              onClick={() => {
+                const searchId = getEntityId(v4());
+
+                onAddFact(entity.id, "poiSearch", searchId);
+                onAddFact(searchId, "category", POI_CATEGORY_OPTIONS[0].name);
+              }}
+            >
+              POI search
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

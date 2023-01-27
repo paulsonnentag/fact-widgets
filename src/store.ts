@@ -58,18 +58,27 @@ export function getEntities(facts: Fact[]): EntityMap {
   const entities: EntityMap = {};
 
   for (const fact of facts) {
-    const { e, key, value } = fact;
+    let { e, key, value } = fact;
 
     const entity = getEntity(entities, e);
-
     // if value is an id resolve it to the entity
     if (isId(value)) {
-      const relatedEntity = getEntity(entities, value);
-      entity.data[key] = relatedEntity;
-      entity.facts.push({ ...fact, value: relatedEntity });
+      value = getEntity(entities, value);
+      entity.facts.push({ ...fact, value });
     } else {
-      entity.data[key] = value;
       entity.facts.push(fact);
+    }
+
+    switch (key) {
+      case "items":
+        if (!entity.data.items) {
+          entity.data.items = [];
+        }
+        entity.data.items.push(value);
+        break;
+
+      default:
+        entity.data[key] = value;
     }
   }
 
@@ -102,6 +111,15 @@ function applyCustomComputations(entities: EntityMap) {
             value: fact.value.data.geoPosition,
             entity: fact.value,
           });
+        }
+
+        if (fact.value.data.items) {
+          for (const item of fact.value.data.items) {
+            geoPositions.push({
+              value: item.data.geoPoint,
+              entity: fact.value,
+            });
+          }
         }
       }
     }

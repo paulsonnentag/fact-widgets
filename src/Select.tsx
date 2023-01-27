@@ -4,7 +4,7 @@ export interface Option<T> {
 }
 
 interface SelectProps<T> {
-  selectedOption: Option<T>;
+  selectedOption: Option<T> | undefined;
   options: Option<T>[];
   onChange: (option: Option<T> | undefined) => void;
 }
@@ -16,7 +16,8 @@ export function Select<T>({
 }: SelectProps<T>) {
   return (
     <select
-      value={selectedOption.name}
+      className="bg-transparent border-b border-b-gray-300 w-fit"
+      value={selectedOption?.name}
       onChange={(evt) => {
         const selectedOption = options.find(
           (option) => option.name === evt.target.value

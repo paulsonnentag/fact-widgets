@@ -1,12 +1,10 @@
-import { useCallback, useState } from "react";
-import { LngLat } from "maplibre-gl";
-import { Option } from "./Select";
+import { createContext, useCallback, useContext, useState } from "react";
 import {
+  EntityId,
   EntityMap,
   Fact,
   getEntities,
   getEntityId,
-  EntityId,
   getId,
 } from "./store";
 import { WidgetView } from "./Widget";
@@ -25,56 +23,17 @@ function getWidgetEntities(entities: EntityMap) {
   });
 }
 
-const LOCATION_OPTIONS: Option<LngLat>[] = [
-  { name: "Aachen", value: new LngLat(6.083611, 50.775555) },
-  { name: "Boston", value: new LngLat(-71.057083, 42.361145) },
-  { name: "San Francisco", value: new LngLat(-122.431297, 37.773972) },
-];
-
 const INITIAL_FACTS: Fact[] = [
   { id: getId(), e: getEntityId("w1"), key: "width", value: 100 },
   { id: getId(), e: getEntityId("w1"), key: "width", value: 300 },
   { id: getId(), e: getEntityId("w1"), key: "height", value: 300 },
   { id: getId(), e: getEntityId("w1"), key: "x", value: 100 },
   { id: getId(), e: getEntityId("w1"), key: "y", value: 100 },
-  { id: getId(), e: getEntityId("w2"), key: "width", value: 300 },
-  { id: getId(), e: getEntityId("w2"), key: "height", value: 300 },
-  { id: getId(), e: getEntityId("w2"), key: "x", value: 500 },
-  { id: getId(), e: getEntityId("w2"), key: "y", value: 100 },
-  {
-    id: getId(),
-    e: getEntityId("w1"),
-    key: "location",
-    value: getEntityId("location"),
-  },
-  {
-    id: getId(),
-    e: getEntityId("location"),
-    key: "name",
-    value: LOCATION_OPTIONS[0].name,
-  },
-  {
-    id: getId(),
-    e: getEntityId("location"),
-    key: "name",
-    value: LOCATION_OPTIONS[0].name,
-  },
-  {
-    id: getId(),
-    e: getEntityId("location"),
-    key: "geoPosition",
-    value: LOCATION_OPTIONS[0].value,
-  },
-  {
-    id: getId(),
-    e: getEntityId("w1"),
-    key: "cities nearby",
-    value: getEntityId("location"),
-  },
 ];
 
 export function App() {
   const [facts, setFacts] = useState<Fact[]>(INITIAL_FACTS);
+  const [isDebugMode, setIsDebugMode] = useState(false);
   const entities = getEntities(facts);
   const widgetEntities = getWidgetEntities(entities);
 
@@ -117,17 +76,43 @@ export function App() {
   );
 
   return (
-    <div>
-      {widgetEntities.map((entity) => (
-        <WidgetView
-          key={entity.id.toString()}
-          entity={entity}
-          onAddFact={onAddFact}
-          onReplaceFact={onReplaceFact}
-          onRetractFact={onRetractFact}
-          onRetractFactById={onRetractFactById}
-        />
-      ))}
-    </div>
+    <DebugModeContext.Provider value={isDebugMode}>
+      <EntitiesContext.Provider value={entities}>
+        <div className="w-screen h-screen">
+          {widgetEntities.map((entity) => (
+            <WidgetView
+              key={entity.id.toString()}
+              entity={entity}
+              onAddFact={onAddFact}
+              onReplaceFact={onReplaceFact}
+              onRetractFact={onRetractFact}
+              onRetractFactById={onRetractFactById}
+            />
+          ))}
+
+          <label className="fixed right-2 top-2">
+            <input
+              type="checkbox"
+              checked={isDebugMode}
+              onChange={() => setIsDebugMode((isDebugMode) => !isDebugMode)}
+            />{" "}
+            debug view
+          </label>
+        </div>
+      </EntitiesContext.Provider>
+    </DebugModeContext.Provider>
   );
+}
+
+export const EntitiesContext = createContext<EntityMap>({});
+
+export function useEntity(id: EntityId) {
+  const entities = useContext(EntitiesContext);
+  return entities[id.toString()];
+}
+
+export const DebugModeContext = createContext<boolean>(false);
+
+export function useIsDebugMode() {
+  return useContext(DebugModeContext);
 }
